@@ -1,0 +1,190 @@
+---
+title: "Mapa de conectividad de grupos funcionales de aves en otros hábitats en el cantón de San José"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+#-------------------- Paquetes --------------------
+
+library(flexdashboard)
+library(dplyr)
+library(sf)
+library(leaflet)
+library(leafem)
+library(esri2sf)
+library(raster)
+
+#--------------- URL de geoservicios --------------
+
+url_agfs_limite_sanjose <-
+  "https://services9.arcgis.com/RrvMEynxDB8hycVO/arcgis/rest/services/gam_limite_san_jose/FeatureServer/0"
+
+url_raster_probabilidad_conectividad <-
+  "https://raw.githubusercontent.com/atlas-servicios-ecosistemicos-gam/datos/master/conectividad/sanjose/otras/PROBABILIDAD_CONECTIVIDAD_OTRAS_SAN_JOSE_WEB.TIF"
+
+url_agfs_teselas <-
+  "https://services9.arcgis.com/RrvMEynxDB8hycVO/arcgis/rest/services/gam_conectividad_parches_esenciales_importantes_otras_san_jose/FeatureServer/0"
+
+url_agfs_rutas <-
+  "https://services9.arcgis.com/RrvMEynxDB8hycVO/arcgis/rest/services/gam_conectividad_rutas_conectividad_otras_san_jose/FeatureServer/0"
+
+#--------------- Objetos sf y raster ---------------
+
+# Límite del cantón de San José
+sf_limite_sanjose <-
+  esri2sf(url_agfs_limite_sanjose)
+
+# Límite del cantón de San José (reproyectado a Web Mercator)
+sf_limite_sanjose_web <- 
+  sf_limite_sanjose %>%
+  st_transform(3857)
+
+# Capa raster de probabilidad de conectividad (en Web Mercator)
+raster_probabilidad_conectividad <-
+  raster(url_raster_probabilidad_conectividad) %>%
+  crop(sf_limite_sanjose_web) %>%
+  mask(sf_limite_sanjose_web)
+
+# Teselas
+sf_teselas <- 
+  esri2sf(url_agfs_teselas)
+
+# Rutas de conectividad
+sf_rutas <- 
+  esri2sf(url_agfs_rutas)
+
+#---------------- Paletas de colores ---------------
+
+# Esencialidad
+bins_esencialidad <- c(0, 0.0024814, 0.0028003, 0.0087861, 0.0249912, Inf)
+etiquetas_esencialidad <- c("Muy poco esencial", "Poco esencial", "Medianamente esencial", "Esencial", "Altamente esencial")
+pal_esencialidad <- 
+  colorBin(
+    bins = bins_esencialidad,
+    palette = "Blues", 
+    domain = sf_teselas$d_PC,
+    n = 5,
+  )
+
+# Importancia
+bins_importancia <- c(0, 192010540.93, 387140771.96, 597771302.67, 844641504.49, Inf)
+etiquetas_importancia <- c("Muy baja importancia", "Importancia baja", "Importancia media", "Alta importancia", "Muy alta importancia")
+pal_importancia <- 
+  colorBin(
+    bins = bins_importancia,
+    palette = "Blues", 
+    domain = sf_teselas$IF_,
+    n = 5,
+  )
+
+# Probabilidad
+colores_probabilidad <- c("#deebf7", "#9ecae1", "#3182bd")
+etiquetas_probabilidad <- c("Baja", "Media", "Alta")
+pal_probabilidad <- 
+  colorNumeric(
+    colores_probabilidad, 
+    values(raster_probabilidad_conectividad),
+    na.color = "transparent"
+  )
+
+```
+
+Row
+-----------------------------------------------------------------------
+
+### 
+
+```{r}
+
+leaflet() %>%
+  setView(-84.09, 9.94, 13) %>%
+  addProviderTiles(providers$CartoDB.DarkMatter, group = "CartoDB Dark Matter") %>%
+  addProviderTiles(providers$OpenStreetMap.Mapnik, group = "OpenStreetMap") %>%
+  addProviderTiles(providers$Stamen.TonerLite, group = "Stamen Toner Lite") %>%
+  addProviderTiles(providers$Esri.WorldImagery, group = "Imágenes de ESRI") %>%
+  addPolygons(
+    data = sf_limite_sanjose,
+    color = "Purple",
+    fillColor = "transparent",
+    stroke = TRUE,
+    weight = 6.0,
+    group = "Límite de San José"
+  ) %>%
+  addRasterImage(
+    raster_probabilidad_conectividad, 
+    colors = pal_probabilidad,
+    opacity = 0.9,
+    group = "Probabilidad de conectividad"
+  ) %>%  
+  addLegend(
+    title = "Probabilidad de conectividad", 
+    values = values(raster_probabilidad_conectividad),
+    colors = colores_probabilidad,
+    labels = etiquetas_probabilidad,
+    position = "bottomright",
+    group = "Probabilidad de conectividad"
+  ) %>%  
+  addPolygons(
+    data = sf_teselas,
+    fillOpacity = 0.9,
+    stroke = TRUE,
+    color = "Black",
+    fillColor = ~pal_esencialidad(d_PC),
+    weight = 1,
+    group = "Teselas esenciales"
+  ) %>%
+  addLegend(
+    position = "bottomright",
+    pal = pal_esencialidad,
+    values = sf_teselas$d_PC,
+    labFormat = function(type, cuts, p) {paste0(etiquetas_esencialidad)},
+    group = "Teselas esenciales",
+    title = "Esencialidad"
+  ) %>%    
+  addPolygons(
+    data = sf_teselas,
+    fillOpacity = 0.9,
+    stroke = TRUE,
+    color = "Black",
+    fillColor = ~pal_importancia(IF_),
+    weight = 1,
+    group = "Teselas importantes"
+  ) %>%
+  addLegend(
+    position = "bottomright",
+    pal = pal_importancia,
+    values = sf_teselas$IF_,
+    labFormat = function(type, cuts, p) {paste0(etiquetas_importancia)},
+    group = "Teselas importantes",
+    title = "Importancia"
+  ) %>%    
+  addPolylines(
+    data = sf_rutas,
+    color = "Green",
+    fillColor = "transparent",
+    stroke = TRUE,
+    weight = 1.5,
+    group = "Rutas de conectividad"
+  ) %>%
+  addLayersControl(
+    baseGroups = c("CartoDB Dark Matter", "OpenStreetMap", "Stamen Toner Lite", "Imágenes de ESRI"),
+    overlayGroups = c("Límite de San José", "Probabilidad de conectividad", "Teselas esenciales", "Teselas importantes", "Rutas de conectividad"),
+    options = layersControlOptions(collapsed = TRUE)    
+  ) %>%  
+  addMiniMap(
+    toggleDisplay = TRUE,
+    position = "bottomleft",
+    tiles = providers$CartoDB.DarkMatter
+  ) %>%
+  addScaleBar(
+    position = "bottomleft",
+    options = scaleBarOptions(imperial = FALSE)
+  ) %>%
+  addMouseCoordinates() %>%
+  hideGroup("Teselas esenciales") %>%
+  hideGroup("Teselas importantes")
+
+```
