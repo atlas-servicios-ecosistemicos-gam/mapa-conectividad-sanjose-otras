@@ -23,7 +23,7 @@ url_agfs_limite_sanjose <-
   "https://services9.arcgis.com/RrvMEynxDB8hycVO/arcgis/rest/services/gam_limite_san_jose/FeatureServer/0"
 
 url_raster_probabilidad_conectividad <-
-  "https://raw.githubusercontent.com/atlas-servicios-ecosistemicos-gam/datos/master/conectividad/sanjose/otras/PROBABILIDAD_CONECTIVIDAD_OTRAS_SAN_JOSE_WEB.TIF"
+  "https://raw.githubusercontent.com/atlas-servicios-ecosistemicos-gam/datos-conectividad/master/sanjose/otras/PROBABILIDAD_CONECTIVIDAD_OTRAS_SAN_JOSE_WEB.TIF"
 
 url_agfs_teselas <-
   "https://services9.arcgis.com/RrvMEynxDB8hycVO/arcgis/rest/services/gam_conectividad_parches_esenciales_importantes_otras_san_jose/FeatureServer/0"
@@ -64,7 +64,9 @@ etiquetas_esencialidad <- c("Muy poco esencial", "Poco esencial", "Medianamente 
 pal_esencialidad <- 
   colorBin(
     bins = bins_esencialidad,
-    palette = "Blues", 
+    palette = c(rgb(247,205,164, maxColorValue=255), rgb(220,136,102, maxColorValue=255),
+                rgb(209,83,84,maxColorValue=255),    rgb(160,45,103, maxColorValue=255),
+                rgb(103,67,130,maxColorValue=255)), 
     domain = sf_teselas$d_PC,
     n = 5,
   )
@@ -75,13 +77,16 @@ etiquetas_importancia <- c("Muy baja importancia", "Importancia baja", "Importan
 pal_importancia <- 
   colorBin(
     bins = bins_importancia,
-    palette = "Blues", 
+    palette = c(rgb(247,205,164, maxColorValue=255), rgb(220,136,102, maxColorValue=255),
+                rgb(209,83,84,maxColorValue=255),    rgb(160,45,103, maxColorValue=255),
+                rgb(103,67,130,maxColorValue=255)), 
     domain = sf_teselas$IF_,
     n = 5,
   )
 
 # Probabilidad
-colores_probabilidad <- c("#deebf7", "#9ecae1", "#3182bd")
+colores_probabilidad <- 
+  c(rgb(247,205,164, maxColorValue=255), rgb(209,83,84,maxColorValue=255), rgb(103,67,130,maxColorValue=255))
 etiquetas_probabilidad <- c("Baja", "Media", "Alta")
 pal_probabilidad <- 
   colorNumeric(
@@ -100,7 +105,6 @@ Row
 ```{r}
 
 leaflet() %>%
-  setView(-84.09, 9.94, 13) %>%
   addProviderTiles(providers$CartoDB.DarkMatter, group = "CartoDB Dark Matter") %>%
   addProviderTiles(providers$OpenStreetMap.Mapnik, group = "OpenStreetMap") %>%
   addProviderTiles(providers$Stamen.TonerLite, group = "Stamen Toner Lite") %>%
