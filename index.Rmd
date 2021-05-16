@@ -13,6 +13,8 @@ library(flexdashboard)
 library(dplyr)
 library(sf)
 library(leaflet)
+library(leaflet.extras)
+library(leaflet.opacity)
 library(leafem)
 library(esri2sf)
 library(raster)
@@ -119,6 +121,7 @@ leaflet() %>%
   ) %>%
   addRasterImage(
     raster_probabilidad_conectividad, 
+    layerId = "raster",    
     colors = pal_probabilidad,
     opacity = 0.9,
     group = "Probabilidad de conectividad"
@@ -188,6 +191,9 @@ leaflet() %>%
     options = scaleBarOptions(imperial = FALSE)
   ) %>%
   addMouseCoordinates() %>%
+  addSearchOSM() %>%
+  addResetMapButton() %>%
+  addOpacitySlider(layerId = "raster") %>%
   hideGroup("Teselas esenciales") %>%
   hideGroup("Teselas importantes")
 
